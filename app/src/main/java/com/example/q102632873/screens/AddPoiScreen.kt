@@ -17,11 +17,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.q102632873.database.PoiDatabaseHelper
 import com.example.q102632873.viewmodel.PoiViewModel
 
 @Composable
 fun AddPoiScreen(
     poiViewModel: PoiViewModel,
+    dbHelper: PoiDatabaseHelper,
     onPoiAdded: () -> Unit
 ) {
     val currentLat by poiViewModel.currentLat.collectAsState()
@@ -60,7 +62,7 @@ fun AddPoiScreen(
         OutlinedTextField(
             value = type,
             onValueChange = { type = it },
-            label = { Text("Type (e.g. pub, hotel, restaurant)") },
+            label = { Text("Type e.g. pub, restaurant, hotel") },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -88,14 +90,15 @@ fun AddPoiScreen(
 
         Button(
             onClick = {
-                val success = poiViewModel.addPoi(
+                val newPoi = poiViewModel.createPoi(
                     name = name,
                     type = type,
                     description = description,
                     code = code
                 )
 
-                if (success) {
+                if (newPoi != null) {
+                    dbHelper.insertPoi(newPoi)
                     onPoiAdded()
                 } else {
                     errorMessage =
@@ -108,3 +111,4 @@ fun AddPoiScreen(
         }
     }
 }
+

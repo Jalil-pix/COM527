@@ -8,34 +8,39 @@ import android.location.LocationListener
 import android.location.LocationManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
-import com.example.q102632873.viewmodel.PoiViewModel
-import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.maps.Style
-import org.ramani.compose.CameraPosition
-import org.ramani.compose.MapLibre
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import com.example.q102632873.data.PointOfInterest
+import com.example.q102632873.viewmodel.PoiViewModel
+import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.maps.Style
+import org.maplibre.android.annotations.MarkerOptions
 
 @Composable
 fun MapScreen(
     poiViewModel: PoiViewModel,
-    onAddPoiClick: () -> Unit
+    onAddPoiClick: () -> Unit,
+    onSearchClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val poiList by poiViewModel.poiList.collectAsState()
+
+    var selectedPoi by remember {
+        mutableStateOf<PointOfInterest?>(null)
+    }
 
     var currentLocation by remember {
         mutableStateOf(LatLng(50.902614, -1.404464))
@@ -122,20 +127,63 @@ fun MapScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    val mapView = remember {
+        MapView(context).apply {
+            onCreate(null)
+            onStart()
+            onResume()
+        }
+    }
 
-        MapLibre(
-            modifier = Modifier.fillMaxSize(),
-            styleBuilder = Style.Builder().fromUri(
-                "https://demotiles.maplibre.org/style.json"
-            ),
-            cameraPosition = CameraPosition(
-                target = currentLocation,
-                zoom = 15.0
-            )
+    DisposableEffect(Unit) {
+        onDispose {
+            mapView.onPause()
+            mapView.onStop()
+            mapView.onDestroy()
+        }
+    }
+
+    Box {
+        AndroidView(
+            factory = { mapView },
+            update = { view ->
+                view.getMapAsync { map ->
+                    map.setStyle(
+                        Style.Builder().fromUri("https://demotiles.maplibre.org/style.json")
+                    ) {
+
+                        map.cameraPosition = CameraPosition.Builder()
+                            .target(currentLocation)
+                            .zoom(15.0)
+                            .build()
+
+                        map.clear()
+
+                        poiList.forEach { poi ->
+                            map.addMarker(
+                                MarkerOptions()
+                                    .position(LatLng(poi.lat, poi.lon))
+                                    .title(poi.name)
+                                    .snippet("${poi.type}: ${poi.description}")
+                            )
+                        }
+
+                        map.setOnMarkerClickListener { marker ->
+                            selectedPoi = poiList.find {
+                                it.name == marker.title &&
+                                        it.lat == marker.position.latitude &&
+                                        it.lon == marker.position.longitude
+                            }
+                            true
+                        }
+                    }
+                }
+            }
         )
 
-        Column {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
             Text(
                 text = "Lat: ${currentLocation.latitude}, Lon: ${currentLocation.longitude}"
             )
@@ -143,6 +191,39 @@ fun MapScreen(
             Button(onClick = onAddPoiClick) {
                 Text("Add POI")
             }
+
+            Button(onClick = onSearchClick) {
+                Text("Search POI")
+            }
         }
+    }
+
+    if (selectedPoi != null) {
+        AlertDialog(
+            onDismissRequest = {
+                selectedPoi = null
+            },
+            title = {
+                Text(selectedPoi!!.name)
+            },
+            text = {
+                Column {
+                    Text("Type: ${selectedPoi!!.type}")
+                    Text("Description: ${selectedPoi!!.description}")
+                    Text("Code: ${selectedPoi!!.code}")
+                    Text("Lat: ${selectedPoi!!.lat}")
+                    Text("Lon: ${selectedPoi!!.lon}")
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        selectedPoi = null
+                    }
+                ) {
+                    Text("Close")
+                }
+            }
+        )
     }
 }

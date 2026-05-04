@@ -4,6 +4,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 
 @Composable
-fun SearchPoiScreen() {
-    Text("Search POI Screen")
+fun PoiListScreen() {
+    Text("POI List Screen")
 }

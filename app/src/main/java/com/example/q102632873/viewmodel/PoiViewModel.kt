@@ -21,18 +21,28 @@ class PoiViewModel : ViewModel() {
         _currentLon.value = lon
     }
 
-    fun addPoi(
+    fun loadPois(pois: List<PointOfInterest>) {
+        _poiList.value = pois
+    }
+
+    fun showSearchResults(results: List<PointOfInterest>) {
+        _poiList.value = results
+    }
+
+    fun createPoi(
         name: String,
         type: String,
         description: String,
         code: String
-    ): Boolean {
+    ): PointOfInterest? {
         if (name.isBlank() || type.isBlank() || description.isBlank()) {
-            return false
+            return null
         }
 
+
+
         if (!code.startsWith("0x4d4144")) {
-            return false
+            return null
         }
 
         val newPoi = PointOfInterest(
@@ -46,6 +56,7 @@ class PoiViewModel : ViewModel() {
         )
 
         _poiList.value = _poiList.value + newPoi
-        return true
+
+        return newPoi
     }
 }

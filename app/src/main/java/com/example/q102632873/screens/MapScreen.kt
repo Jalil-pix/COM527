@@ -10,24 +10,31 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import com.example.q102632873.viewmodel.PoiViewModel
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.Style
 import org.ramani.compose.CameraPosition
 import org.ramani.compose.MapLibre
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 
 @Composable
-fun MapScreen() {
+fun MapScreen(
+    poiViewModel: PoiViewModel,
+    onAddPoiClick: () -> Unit
+) {
     val context = LocalContext.current
 
     var currentLocation by remember {
@@ -71,22 +78,24 @@ fun MapScreen() {
             val listener = object : LocationListener {
                 override fun onLocationChanged(location: Location) {
                     currentLocation = LatLng(location.latitude, location.longitude)
+
+                    poiViewModel.updateCurrentLocation(
+                        location.latitude,
+                        location.longitude
+                    )
                 }
             }
 
-            val hasFinePermission =
+            if (
                 ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.ACCESS_FINE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED
-
-            val hasCoarsePermission =
+                ) == PackageManager.PERMISSION_GRANTED ||
                 ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 ) == PackageManager.PERMISSION_GRANTED
-
-            if (hasFinePermission || hasCoarsePermission) {
+            ) {
                 locationManager.requestLocationUpdates(
                     LocationManager.GPS_PROVIDER,
                     2000L,
@@ -99,6 +108,11 @@ fun MapScreen() {
 
                 if (lastLocation != null) {
                     currentLocation = LatLng(lastLocation.latitude, lastLocation.longitude)
+
+                    poiViewModel.updateCurrentLocation(
+                        lastLocation.latitude,
+                        lastLocation.longitude
+                    )
                 }
             }
 
@@ -108,10 +122,7 @@ fun MapScreen() {
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Text(
-            text = "Lat: ${currentLocation.latitude}, Lon: ${currentLocation.longitude}"
-        )
+    Box(modifier = Modifier.fillMaxSize()) {
 
         MapLibre(
             modifier = Modifier.fillMaxSize(),
@@ -123,5 +134,15 @@ fun MapScreen() {
                 zoom = 15.0
             )
         )
+
+        Column {
+            Text(
+                text = "Lat: ${currentLocation.latitude}, Lon: ${currentLocation.longitude}"
+            )
+
+            Button(onClick = onAddPoiClick) {
+                Text("Add POI")
+            }
+        }
     }
 }
